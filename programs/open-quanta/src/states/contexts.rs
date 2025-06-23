@@ -1,6 +1,12 @@
 use anchor_lang::prelude::*;
 
-use crate::{Administrators, AuthorProfile, PaperIDCounter};
+use anchor_spl::{
+    associated_token::AssociatedToken, 
+    token_interface::{TokenAccount, Mint, TokenInterface},
+    metadata::{MasterEditionAccount, Metadata, MetadataAccount}
+};
+
+use crate::{Administrators, AuthorProfile, PaperIDCounter, ReviewerProfile, Paper};
 use crate::states::errors::*;
 
 
@@ -70,4 +76,114 @@ pub struct AuthorProfileInfo<'info> {
     pub author_profile: Account<'info, AuthorProfile>,
 
     pub system_program: Program<'info, System>,
+}
+
+
+// REVIEWER PROFILE CONTEXT
+#[derive(Accounts)]
+pub struct ReviewerProfileInfo<'info> {
+
+    #[account(mut)]
+    pub reviewer: Signer<'info>,
+
+    #[account(
+        init,
+        payer = reviewer,
+        space = 8 + ReviewerProfile::INIT_SPACE,
+        seeds = [b"reviewer_profile", reviewer.key().as_ref()],
+        bump,
+    )]
+    pub reviewer_profile: Account<'info, ReviewerProfile>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// PAPER CONTEXT
+#[derive(Accounts)]
+pub struct PaperInfo<'info> {
+
+    #[account(mut)]
+    pub paper_submitter: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"paper_id_counter".as_ref()],
+        bump = paper_id_assigner.counter_bump
+    )]
+    pub paper_id_assigner: Account<'info, PaperIDCounter>,
+
+    #[account(
+        mut,
+        seeds = [b"author_profile", paper_submitter.key().as_ref()],
+        bump = author_profile.author_bump,
+    )]
+    pub author_profile: Account<'info, AuthorProfile>,
+
+    #[account(
+        init,
+        payer = paper_submitter,
+        space = 8 + Paper::INIT_SPACE,
+        seeds = [b"paper", paper_submitter.key().as_ref(), &format!("OQ-{:07}", paper_id_assigner.current_id + 1).as_bytes()],
+        bump
+    )]
+    pub research_paper: Account<'info, Paper>,
+
+    pub system_program: Program<'info, System>,
+}
+
+
+// Open Quanta Master Authorship NFT Collection
+#[derive(Accounts)]
+pub struct MasterAuthorshipNFTCollection<'info> {
+    #[account(
+        mut,
+        constraint = admins.admins_pubkey.contains(&admin.key()) @OpenQuantaErrors::OnlyAdmin
+    )]
+    pub admin: Signer<'info>,
+
+    #[account(
+        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
+        bump = admins.admins_bump
+    )]
+    pub admins: Account<'info, Administrators>,
+
+    #[account(mut)]
+    pub oq_parent_collection_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"metadata",
+            metadata_program.key().as_ref(),
+            oq_parent_collection_mint.key().as_ref()
+        ],
+        seeds::program = metadata_program.key(),
+        bump
+    )]
+    /// CHECK: Initialized Via Metaplex CPI
+    pub oq_parent_authorship_nft_metadata: UncheckedAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"metadata",
+            metadata_program.key().as_ref(),
+            oq_parent_collection_mint.key().as_ref(),
+            b"edition"
+        ],
+        seeds::program = metadata_program.key(),
+        bump
+    )]
+    /// CHECK: Initialized Via Metaplex CPI
+    pub oq_parent_authorship_nft_master_edition: UncheckedAccount<'info>,
+
+    pub metadata_program: Program<'info, Metadata>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+
+    pub system_program: Program<'info, System>,
+
+    pub rent: Sysvar<'info, Rent>,
 }

@@ -32,6 +32,8 @@ pub struct AuthorProfile {
     #[max_len(20)]
     pub author_field_of_study: String,
 
+    pub number_of_submitted_papers: u16,
+
     pub joined_at: i64,
 
 }
@@ -54,6 +56,8 @@ pub struct ReviewerProfile {
 
     #[max_len(20)]
     pub reviewer_field_of_study: String,
+
+    pub joined_at: i64,
 }
 
 
@@ -64,4 +68,34 @@ pub struct PaperIDCounter {
     pub current_id: u64,
 
     pub counter_bump: u8,
+}
+
+
+
+// PAPER SUBMISSION 
+#[account]
+#[derive(InitSpace)]
+pub struct Paper {
+    pub owner_of_paper: Pubkey,
+
+    #[max_len(5)]
+    pub research_sub_owners: Vec<Pubkey>,
+
+    #[max_len(100)]
+    pub title_of_paper: String,
+
+    #[max_len(50)]
+    pub field_of_research: String,
+
+    #[max_len(50)]
+    pub ipfs_hash_to_paper: String,
+
+    #[max_len(10)]
+    pub open_quanta_paper_id: String,
+
+    pub paper_version: u8,
+
+    pub time_of_submission: i64,
+
+    pub paper_bump: u8,
 }
