@@ -24,7 +24,7 @@ pub fn paper_submit(
             title_of_paper,
             field_of_research,
             ipfs_hash_to_paper: paper_ipfs_hash,
-            open_quanta_paper_id: format!("OQ-{:07}", paper_id_counter.current_id + 1),
+            open_quanta_paper_id: format!("OQ-{:10}", paper_id_counter.current_id + 1),
             paper_version,
             time_of_submission: Clock::get()?.unix_timestamp,
             paper_bump: ctx.bumps.research_paper
