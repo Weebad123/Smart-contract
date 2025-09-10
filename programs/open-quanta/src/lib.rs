@@ -28,6 +28,12 @@ pub mod open_quanta {
         Ok(())
     }
 
+    // INITIALIZE COLLECTION REGISTRY
+    pub fn initialize_collection_registry(ctx: Context<CollectionRegistryInfo>) -> Result<()> {
+        instructions::init_collection_registry(ctx)?;
+        Ok(())
+    }
+
     // INITIALIZE PAPER ID COUNTER
     pub fn initialize_paper_id(ctx: Context<PaperIDCounterInfo>) -> Result<()> {
 
@@ -59,4 +65,9 @@ pub mod open_quanta {
     instructions::paper_submit(ctx, title_of_paper, paper_ipfs_hash, field_of_research, paper_version, paper_sub_owners)?;
     Ok(())
 }
+
+    // CREATE OPENQUANTA COLLECTION
+    pub fn create_collection(ctx: Context<CreateCollection>, name: String, uri: String) -> Result<()> {
+        instructions::create_collection(ctx, name, uri)
+    }
 }
