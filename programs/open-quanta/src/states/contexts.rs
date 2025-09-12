@@ -1,12 +1,8 @@
 use anchor_lang::prelude::*;
 
-use anchor_spl::{
-    associated_token::AssociatedToken, 
-    token_interface::{TokenAccount, Mint, TokenInterface},
-    metadata::{MasterEditionAccount, Metadata, MetadataAccount}
-};
+use mpl_core::ID as MPL_CORE_PROGRAM_ID;
 
-use crate::{Administrators, AuthorProfile, PaperIDCounter, ReviewerProfile, Paper};
+use crate::{Administrators, AuthorProfile, PaperIDCounter, ReviewerProfile, Paper, CollectionRegistry};
 use crate::states::errors::*;
 
 
@@ -25,6 +21,33 @@ pub struct AdministratorsInfo<'info> {
         bump,
     )]
     pub admins: Account<'info, Administrators>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// COLLECTION REGISTRY INITIALIZATION CONTEXT
+#[derive(Accounts)]
+pub struct CollectionRegistryInfo<'info> {
+    #[account(
+        mut,
+        constraint = admins.admins_pubkey.contains(&admin.key()) @OpenQuantaErrors::OnlyAdmin
+    )]
+    pub admin: Signer<'info>,
+
+    #[account(
+        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
+        bump = admins.admins_bump
+    )]
+    pub admins: Account<'info, Administrators>,
+
+    #[account(
+        init,
+        payer = admin,
+        space = 8 + CollectionRegistry::INIT_SPACE,
+        seeds = [b"collection_registry".as_ref(), b"OpenQuanta".as_ref()],
+        bump,
+    )]
+    pub collection_registry: Account<'info, CollectionRegistry>,
 
     pub system_program: Program<'info, System>,
 }
@@ -132,9 +155,65 @@ pub struct PaperInfo<'info> {
 }
 
 
-// Open Quanta Master Authorship NFT Collection
+// // Open Quanta Master Authorship NFT Collection
+// #[derive(Accounts)]
+// pub struct MasterAuthorshipNFTCollection<'info> {
+//     #[account(
+//         mut,
+//         constraint = admins.admins_pubkey.contains(&admin.key()) @OpenQuantaErrors::OnlyAdmin
+//     )]
+//     pub admin: Signer<'info>,
+
+//     #[account(
+//         seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
+//         bump = admins.admins_bump
+//     )]
+//     pub admins: Account<'info, Administrators>,
+
+//     #[account(mut)]
+//     pub oq_parent_collection_mint: InterfaceAccount<'info, Mint>,
+
+//     #[account(
+//         mut,
+//         seeds = [
+//             b"metadata",
+//             metadata_program.key().as_ref(),
+//             oq_parent_collection_mint.key().as_ref()
+//         ],
+//         seeds::program = metadata_program.key(),
+//         bump
+//     )]
+//     /// CHECK: Initialized Via Metaplex CPI
+//     pub oq_parent_authorship_nft_metadata: UncheckedAccount<'info>,
+
+//     #[account(
+//         mut,
+//         seeds = [
+//             b"metadata",
+//             metadata_program.key().as_ref(),
+//             oq_parent_collection_mint.key().as_ref(),
+//             b"edition"
+//         ],
+//         seeds::program = metadata_program.key(),
+//         bump
+//     )]
+//     /// CHECK: Initialized Via Metaplex CPI
+//     pub oq_parent_authorship_nft_master_edition: UncheckedAccount<'info>,
+
+//     pub metadata_program: Program<'info, Metadata>,
+
+//     pub associated_token_program: Program<'info, AssociatedToken>,
+
+//     pub token_program: Interface<'info, TokenInterface>,
+
+//     pub system_program: Program<'info, System>,
+
+//     pub rent: Sysvar<'info, Rent>,
+// }
+
+// OPENQUANTA COLLECTION CREATION CONTEXT
 #[derive(Accounts)]
-pub struct MasterAuthorshipNFTCollection<'info> {
+pub struct CreateCollection<'info> {
     #[account(
         mut,
         constraint = admins.admins_pubkey.contains(&admin.key()) @OpenQuantaErrors::OnlyAdmin
@@ -147,43 +226,22 @@ pub struct MasterAuthorshipNFTCollection<'info> {
     )]
     pub admins: Account<'info, Administrators>,
 
+    #[account(
+        mut,
+        seeds = [b"collection_registry".as_ref(), b"OpenQuanta".as_ref()],
+        bump
+    )]
+    pub collection_registry: Account<'info, CollectionRegistry>,
+
     #[account(mut)]
-    pub oq_parent_collection_mint: InterfaceAccount<'info, Mint>,
+    pub payer: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [
-            b"metadata",
-            metadata_program.key().as_ref(),
-            oq_parent_collection_mint.key().as_ref()
-        ],
-        seeds::program = metadata_program.key(),
-        bump
-    )]
-    /// CHECK: Initialized Via Metaplex CPI
-    pub oq_parent_authorship_nft_metadata: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub collection: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [
-            b"metadata",
-            metadata_program.key().as_ref(),
-            oq_parent_collection_mint.key().as_ref(),
-            b"edition"
-        ],
-        seeds::program = metadata_program.key(),
-        bump
-    )]
-    /// CHECK: Initialized Via Metaplex CPI
-    pub oq_parent_authorship_nft_master_edition: UncheckedAccount<'info>,
-
-    pub metadata_program: Program<'info, Metadata>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-
-    pub token_program: Interface<'info, TokenInterface>,
+    #[account(address = MPL_CORE_PROGRAM_ID)]
+    /// CHECK: This doesn't need to be checked, because there is the address constraint
+    pub mpl_core_program: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
-
-    pub rent: Sysvar<'info, Rent>,
 }

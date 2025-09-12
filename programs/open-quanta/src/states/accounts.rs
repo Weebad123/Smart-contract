@@ -13,6 +13,35 @@ pub struct Administrators {
     pub admins_bump: u8,
 }
 
+// COLLECTION REGISTRY ACCOUNT
+// Stores all OpenQuanta collection addresses and metadata
+#[account]
+#[derive(InitSpace)]
+pub struct CollectionRegistry {
+    
+    pub registry_bump: u8,
+    
+    pub total_collections: u64,
+    
+    #[max_len(50)]
+    pub collection_entries: Vec<CollectionEntry>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+pub struct CollectionEntry {
+    pub collection_address: Pubkey,
+    
+    #[max_len(100)]
+    pub collection_name: String,
+    
+    #[max_len(200)]
+    pub collection_uri: String,
+    
+    pub created_at: i64, // Unix timestamp
+    
+    pub created_by: Pubkey, // Admin who created it
+}
+
 
 // AUTHOR PDA ACCOUNT
 // 
