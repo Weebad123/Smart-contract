@@ -37,7 +37,8 @@ pub fn paper_submit(
     // Update Author Profile On Submission
     author_profile_information.number_of_submitted_papers += 1;
 
-
+// Mint AUTHORSHIP NFT HERE
+    
     
     // Emit An Event For The Paper Submission
 

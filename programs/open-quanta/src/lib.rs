@@ -15,16 +15,9 @@ pub mod open_quanta {
 
 
     // INITIALIZE ADMINSTRATORS ACCOUNT
-    pub fn initialize_admins(ctx: Context<AdministratorsInfo>) -> Result<()> {
+    pub fn initialize_admins(ctx: Context<AdministratorsInfo>, admins: Vec<Pubkey>) -> Result<()> {
 
-        instructions::initialize_administrators(ctx)?;
-        Ok(())
-    }
-
-    // ADD ADMINS TO THE ADMINISTRATORS ACCOUNT
-    pub fn add_admin(ctx: Context<AdministratorsInfo>, admins: Vec<Pubkey>) -> Result<()> {
-
-        instructions::add_administrator(ctx, admins)?;
+        instructions::initialize_administrators(ctx, admins)?;
         Ok(())
     }
 

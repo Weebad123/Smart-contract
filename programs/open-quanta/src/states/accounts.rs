@@ -13,6 +13,16 @@ pub struct Administrators {
     pub admins_bump: u8,
 }
 
+
+// OPEN QUANTA NFT MINT AUTHORITY PDA
+#[account]
+#[derive(InitSpace)]
+pub struct OpenQuantaNFTMintAuthority {
+    pub mint_authority: Pubkey,
+
+    pub mint_authority_bump: u8,
+}
+
 // COLLECTION REGISTRY ACCOUNT
 // Stores all OpenQuanta collection addresses and metadata
 #[account]
@@ -21,9 +31,16 @@ pub struct CollectionRegistry {
     
     pub registry_bump: u8,
     
+    // total number of assets in this NFT Collection; set to unlimited 
     pub total_collections: u64,
+
+    // authority address allowed to mint from the OQ NFT collections
+    pub mint_authority: Pubkey,
+
+    // The collection mint for Open Quanta
+    pub collection_mint: Pubkey,
     
-    #[max_len(50)]
+    #[max_len(5)]
     pub collection_entries: Vec<CollectionEntry>,
 }
 

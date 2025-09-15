@@ -1,8 +1,14 @@
 use anchor_lang::prelude::*;
 
-use mpl_core::ID as MPL_CORE_PROGRAM_ID;
+use mpl_core::{
+    ID as MPL_CORE_PROGRAM_ID,
+    accounts::BaseCollectionV1,
+    instructions::{
+        CreateV2CpiAccounts,
+        CreateV2CpiBuilder
+    }};
 
-use crate::{Administrators, AuthorProfile, PaperIDCounter, ReviewerProfile, Paper, CollectionRegistry};
+use crate::{Administrators, AuthorProfile, CollectionRegistry, Paper, PaperIDCounter, ReviewerProfile};
 use crate::states::errors::*;
 
 
@@ -23,6 +29,16 @@ pub struct AdministratorsInfo<'info> {
     pub admins: Account<'info, Administrators>,
 
     pub system_program: Program<'info, System>,
+}
+
+impl<'info> AdministratorsInfo<'info> {
+    pub fn init(&mut self, bumps: AdministratorsInfoBumps) -> Result<()> {
+
+        let mut administrators = self.admins.clone();
+        administrators.admins_pubkey = Vec::new();
+        administrators.admins_bump = bumps.admins;
+        Ok(())
+    }
 }
 
 // COLLECTION REGISTRY INITIALIZATION CONTEXT
@@ -48,6 +64,20 @@ pub struct CollectionRegistryInfo<'info> {
         bump,
     )]
     pub collection_registry: Account<'info, CollectionRegistry>,
+
+    ///CHECK: SAFE TO IGNORE FOR NOW
+     #[account(
+        mut,
+        seeds = [b"OpenQuanta_Nft_Mint_Authority".as_ref()],
+        bump,
+    )]
+    pub oq_nft_mint_authority: AccountInfo<'info>,
+
+    // Created off-chain, and stored here
+    ///CHECK: SAFE TO USE
+    #[account(mut)]
+    pub collection_mint: AccountInfo<'info>,
+
 
     pub system_program: Program<'info, System>,
 }
@@ -78,9 +108,30 @@ pub struct PaperIDCounterInfo<'info> {
     )]
     pub paper_id_assigner: Account<'info, PaperIDCounter>,
 
+    /// CHECK: SAFE TO USE
+    #[account(
+        init,
+        payer = admin,
+        space = 8,
+        seeds = [b"OpenQuanta_Nft_Mint_Authority".as_ref()],
+        bump,
+    )]
+    pub oq_nft_mint_authority: AccountInfo<'info>,
+
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> PaperIDCounterInfo<'info> {
+    pub fn init(&mut self, bumps: PaperIDCounterInfoBumps) -> Result<()> {
+
+        // Initialize Paper ID Counter
+        let mut paper_id_counter = self.paper_id_assigner.clone();
+        paper_id_counter.current_id = 0;
+        paper_id_counter.counter_bump = bumps.paper_id_assigner;
+
+        Ok(())
+    }
+}
 
 // AUTHOR PROFILE CONTEXT
 #[derive(Accounts)]
@@ -151,7 +202,51 @@ pub struct PaperInfo<'info> {
     )]
     pub research_paper: Account<'info, Paper>,
 
+    #[account(
+        mut,
+        seeds = [b"collection_registry".as_ref(), b"OpenQuanta".as_ref()],
+        bump
+    )]
+    pub collection_registry: Account<'info, CollectionRegistry>,
+
+    /// CHECK: SAFE TO USE
+    #[account(
+        mut,
+        constraint = collection.key() == collection_registry.collection_mint @OpenQuantaErrors::InvalidCollection
+    )]
+    pub collection: AccountInfo<'info>,
+
+    /// CHECK: SAFE TO USE
+    #[account(
+        mut,
+        seeds = [b"OpenQuanta_Nft_Mint_Authority".as_ref()],
+        bump,
+    )]
+    pub oq_nft_mint_authority: AccountInfo<'info>,
+
+    /// CHECK: SAFE TO USE
+    #[account(mut)]
+    pub nft_asset: AccountInfo<'info>,
+
     pub system_program: Program<'info, System>,
+}
+
+// IMPLEMENT NFT MINTING LOGIC HERE
+// Mint from the OQ Collections, but Change the Metadata Account
+impl<'info> PaperInfo<'info> {
+    fn mint_authorship_nft(&mut self) -> Result<()> {
+        let mint_accounts = CreateV2CpiAccounts {
+            asset: &self.nft_asset.to_account_info(),
+            collection: Some(&self.collection.to_account_info()),
+            authority: Some(&self.oq_nft_mint_authority.to_account_info()),
+            payer: &self.paper_submitter.to_account_info(),
+            owner: Some(&self.paper_submitter.to_account_info()),
+            update_authority: Some(&self.oq_nft_mint_authority.to_account_info()),
+            system_program: &self.system_program.to_account_info(),
+            log_wrapper: None
+        };
+        Ok(())
+    }
 }
 
 

@@ -3,7 +3,7 @@ use crate::states::contexts::*;
 use crate::states::accounts::CollectionEntry;
 use mpl_core::{
     types::{
-        PluginAuthorityPair, Plugin, PermanentFreezeDelegate, 
+        PluginAuthorityPair, PluginAuthority, Plugin, PermanentFreezeDelegate, 
         Royalties, Creator, RuleSet, PermanentBurnDelegate
     }, 
     instructions::CreateCollectionV2CpiBuilder, 
@@ -15,9 +15,7 @@ use mpl_core::{
 // INITIALIZE PAPER ID GLOBAL COUNTER
 pub fn init_paper_counter(ctx: Context<PaperIDCounterInfo>) -> Result<()> {
 
-    let paper_id_counter = &mut ctx.accounts.paper_id_assigner;
-    paper_id_counter.current_id = 0;
-    paper_id_counter.counter_bump = ctx.bumps.paper_id_assigner;
+    ctx.accounts.init(ctx.bumps)?;
     
     Ok(())
 }
@@ -28,6 +26,8 @@ pub fn init_collection_registry(ctx: Context<CollectionRegistryInfo>) -> Result<
     collection_registry.registry_bump = ctx.bumps.collection_registry;
     collection_registry.total_collections = 0;
     collection_registry.collection_entries = vec![];
+    collection_registry.mint_authority = ctx.accounts.oq_nft_mint_authority.key();
+    collection_registry.collection_mint = ctx.accounts.collection_mint.key();
     
     msg!("Collection Registry initialized successfully");
     Ok(())
@@ -49,7 +49,7 @@ pub fn create_collection(ctx: Context<CreateCollection>, name: String, uri: Stri
         plugin: Plugin::PermanentFreezeDelegate(PermanentFreezeDelegate { 
             frozen: false 
         }), 
-        authority: None 
+        authority: /*Some(PluginAuthority::Owner)*/None
     });
 
     // 2. Royalties - 5% royalties for research funding with admin as sole beneficiary
