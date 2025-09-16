@@ -1,3 +1,4 @@
 {
-    "dependi.npm.lockFileEnabled": true
+    "dependi.npm.lockFileEnabled": true,
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

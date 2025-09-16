@@ -23,7 +23,7 @@ pub struct AdministratorsInfo<'info> {
         init,
         payer = deployer,
         space = 8 + Administrators::INIT_SPACE,
-        seeds = [b"administrators".as_ref(), b"openQuanta".as_ref()],
+        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
         bump,
     )]
     pub admins: Account<'info, Administrators>,
@@ -52,7 +52,7 @@ pub struct CollectionRegistryInfo<'info> {
 
     #[account(
         seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
-        bump = admins.admins_bump
+        bump
     )]
     pub admins: Account<'info, Administrators>,
 
@@ -95,7 +95,7 @@ pub struct PaperIDCounterInfo<'info> {
 
     #[account(
         seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
-        bump = admins.admins_bump
+        bump
     )]
     pub admins: Account<'info, Administrators>,
 
@@ -224,9 +224,13 @@ pub struct PaperInfo<'info> {
     )]
     pub oq_nft_mint_authority: AccountInfo<'info>,
 
-    /// CHECK: SAFE TO USE
+    //
     #[account(mut)]
-    pub nft_asset: AccountInfo<'info>,
+    pub nft_asset: Signer<'info>,
+
+    #[account(address = MPL_CORE_PROGRAM_ID)]
+    /// CHECK: This doesn't need to be checked, because there is the address constraint
+    pub mpl_core_program: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -234,7 +238,7 @@ pub struct PaperInfo<'info> {
 // IMPLEMENT NFT MINTING LOGIC HERE
 // Mint from the OQ Collections, but Change the Metadata Account
 impl<'info> PaperInfo<'info> {
-    fn mint_authorship_nft(&mut self) -> Result<()> {
+    pub fn mint_authorship_nft(&mut self) -> Result<()> {
         let mint_accounts = CreateV2CpiAccounts {
             asset: &self.nft_asset.to_account_info(),
             collection: Some(&self.collection.to_account_info()),

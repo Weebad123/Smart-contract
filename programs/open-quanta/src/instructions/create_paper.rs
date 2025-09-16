@@ -38,7 +38,7 @@ pub fn paper_submit(
     author_profile_information.number_of_submitted_papers += 1;
 
 // Mint AUTHORSHIP NFT HERE
-    
+    //ctx.accounts.mint_authorship_nft()?;
     
     // Emit An Event For The Paper Submission
 
