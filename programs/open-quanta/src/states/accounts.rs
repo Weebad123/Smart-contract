@@ -118,6 +118,17 @@ pub struct PaperIDCounter {
 
 
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct PaperArgs {
+    pub title_of_paper: String,
+
+    pub paper_ipfs_hash: String,
+
+    pub field_of_research: String,
+
+    pub paper_version: u8,
+}
+
 // PAPER SUBMISSION 
 #[account]
 #[derive(InitSpace)]

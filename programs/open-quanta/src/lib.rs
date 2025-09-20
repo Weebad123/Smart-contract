@@ -48,19 +48,18 @@ pub mod open_quanta {
         Ok(())
     }
 
-    // SUBMIT A PAPER
-    pub fn submit_paper(
-    ctx: Context<PaperInfo>, 
-    title_of_paper: String, paper_ipfs_hash: String, 
-    field_of_research: String, paper_version: u8, paper_sub_owners: Vec<Pubkey>
-) -> Result<()> {
-
-    instructions::paper_submit(ctx, title_of_paper, paper_ipfs_hash, field_of_research, paper_version, paper_sub_owners)?;
-    Ok(())
-}
-
     // CREATE OPENQUANTA COLLECTION
     pub fn create_collection(ctx: Context<CreateCollection>, name: String, uri: String) -> Result<()> {
         instructions::create_collection(ctx, name, uri)
     }
+
+       // SUBMIT A PAPER
+    pub fn submit_paper(
+    ctx: Context<PaperInfo>, 
+    paper_args: PaperArgs, paper_sub_owners: Vec<Pubkey>
+) -> Result<()> {
+
+    instructions::paper_submit(ctx, paper_args, paper_sub_owners)?;
+    Ok(())
+}
 }

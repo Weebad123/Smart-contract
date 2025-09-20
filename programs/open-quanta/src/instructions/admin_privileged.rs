@@ -3,10 +3,10 @@ use crate::states::contexts::*;
 use crate::states::accounts::CollectionEntry;
 use mpl_core::{
     types::{
-        PluginAuthorityPair, PluginAuthority, Plugin, PermanentFreezeDelegate, 
-        Royalties, Creator, RuleSet, PermanentBurnDelegate
+        PluginAuthorityPair, Plugin, PermanentFreezeDelegate, 
+        Royalties, Creator, RuleSet, PermanentBurnDelegate,
     }, 
-    instructions::CreateCollectionV2CpiBuilder, 
+    instructions::CreateCollectionV2CpiBuilder,
 };
 
 
@@ -34,12 +34,6 @@ pub fn init_collection_registry(ctx: Context<CollectionRegistryInfo>) -> Result<
 }
 
 
-// // INITIALIZE THE OpenQuanta PARENT AUTHORSHIP NFT COLLECTION
-// pub fn init_master_authorship_nft_collection(ctx: Context<MasterAuthorshipNFTCollection>, nft_uri: String) -> Result<()> {
-
-//     Ok(())
-// }
-
 // CREATE OPENQUANTA COLLECTION
 pub fn create_collection(ctx: Context<CreateCollection>, name: String, uri: String) -> Result<()> {
     let mut collection_plugins = vec![];
@@ -51,6 +45,7 @@ pub fn create_collection(ctx: Context<CreateCollection>, name: String, uri: Stri
         }), 
         authority: /*Some(PluginAuthority::Owner)*/None
     });
+    
 
     // 2. Royalties - 5% royalties for research funding with admin as sole beneficiary
     collection_plugins.push(PluginAuthorityPair {

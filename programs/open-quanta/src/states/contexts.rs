@@ -1,14 +1,15 @@
+
 use anchor_lang::prelude::*;
 
 use mpl_core::{
     ID as MPL_CORE_PROGRAM_ID,
-    accounts::BaseCollectionV1,
     instructions::{
-        CreateV2CpiAccounts,
         CreateV2CpiBuilder
+    }, types::{
+        Attribute, Attributes, BurnDelegate, FreezeDelegate, Plugin, PluginAuthority, PluginAuthorityPair
     }};
 
-use crate::{Administrators, AuthorProfile, CollectionRegistry, Paper, PaperIDCounter, ReviewerProfile};
+use crate::{Administrators, AuthorProfile, CollectionRegistry, Paper, PaperArgs, PaperIDCounter, ReviewerProfile};
 use crate::states::errors::*;
 
 
@@ -236,79 +237,83 @@ pub struct PaperInfo<'info> {
 }
 
 // IMPLEMENT NFT MINTING LOGIC HERE
-// Mint from the OQ Collections, but Change the Metadata Account
+// Mint from the OQ Collections, and Add Research Attributes to NFT
 impl<'info> PaperInfo<'info> {
-    pub fn mint_authorship_nft(&mut self) -> Result<()> {
-        let mint_accounts = CreateV2CpiAccounts {
-            asset: &self.nft_asset.to_account_info(),
-            collection: Some(&self.collection.to_account_info()),
-            authority: Some(&self.oq_nft_mint_authority.to_account_info()),
-            payer: &self.paper_submitter.to_account_info(),
-            owner: Some(&self.paper_submitter.to_account_info()),
-            update_authority: Some(&self.oq_nft_mint_authority.to_account_info()),
-            system_program: &self.system_program.to_account_info(),
-            log_wrapper: None
-        };
+    pub fn mint_authorship_nft(&mut self, bumps: PaperInfoBumps, paper_args: PaperArgs) -> Result<()> {
+
+        let authority_seeds = &[
+            b"OpenQuanta_Nft_Mint_Authority".as_ref(),
+            &[bumps.oq_nft_mint_authority]
+        ];
+        let signers_seeds = &[&authority_seeds[..]];
+
+        let mut asset_plugins : Vec<PluginAuthorityPair> = vec![];
+        let asset_attributes: Vec<Attribute> = vec![
+            Attribute {
+                key: "OpenQuanta NFT".to_string(),
+                value: "Authorship NFT".to_string()
+            },
+            Attribute {
+                key: "owner_of_paper".to_string(),
+                value: self.paper_submitter.key().to_string()
+            },
+            
+            Attribute {
+                key: "title of research paper".to_string(),
+                value: paper_args.title_of_paper
+            },
+
+            Attribute {
+                key: "field of research paper".to_string(),
+                value: paper_args.field_of_research
+            },
+
+            Attribute {
+                key: "paper version".to_string(),
+                value: paper_args.paper_version.to_string()
+            },
+
+            Attribute {
+                key: "ipfs hash of research".to_string(),
+                value: paper_args.paper_ipfs_hash
+            },
+        ];
+
+        asset_plugins.push(PluginAuthorityPair {
+            plugin: Plugin::Attributes(Attributes { attribute_list: asset_attributes }),
+            authority: None/*Some(PluginAuthority::UpdateAuthority) might not be needed */
+        });
+
+        asset_plugins.push(PluginAuthorityPair {
+            plugin: Plugin::FreezeDelegate(FreezeDelegate{ frozen: true }),
+            authority: Some(PluginAuthority::UpdateAuthority)
+        });
+
+        asset_plugins.push(PluginAuthorityPair {
+            plugin: Plugin::BurnDelegate(BurnDelegate {}),
+            authority: Some(PluginAuthority::UpdateAuthority)
+        });
+        /* Might add later
+        asset_plugins.push(PluginAuthorityPair {
+            plugin: Plugin::Edition(Edition {
+                number: 1,
+            }),
+            authority: None
+        });*/
+        CreateV2CpiBuilder::new(&self.mpl_core_program.to_account_info())
+        .asset(&self.nft_asset.to_account_info())
+        .collection(Some(&self.collection.to_account_info()))
+        .owner(Some(&self.paper_submitter.to_account_info()))
+        .authority(Some(&self.oq_nft_mint_authority.to_account_info()))
+        .payer(&self.paper_submitter.to_account_info())
+        .system_program(&self.system_program.to_account_info())
+        .update_authority(Some(&self.oq_nft_mint_authority.to_account_info()))
+        .plugins(asset_plugins)
+        .invoke_signed(signers_seeds)?;
         Ok(())
     }
 }
 
-
-// // Open Quanta Master Authorship NFT Collection
-// #[derive(Accounts)]
-// pub struct MasterAuthorshipNFTCollection<'info> {
-//     #[account(
-//         mut,
-//         constraint = admins.admins_pubkey.contains(&admin.key()) @OpenQuantaErrors::OnlyAdmin
-//     )]
-//     pub admin: Signer<'info>,
-
-//     #[account(
-//         seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
-//         bump = admins.admins_bump
-//     )]
-//     pub admins: Account<'info, Administrators>,
-
-//     #[account(mut)]
-//     pub oq_parent_collection_mint: InterfaceAccount<'info, Mint>,
-
-//     #[account(
-//         mut,
-//         seeds = [
-//             b"metadata",
-//             metadata_program.key().as_ref(),
-//             oq_parent_collection_mint.key().as_ref()
-//         ],
-//         seeds::program = metadata_program.key(),
-//         bump
-//     )]
-//     /// CHECK: Initialized Via Metaplex CPI
-//     pub oq_parent_authorship_nft_metadata: UncheckedAccount<'info>,
-
-//     #[account(
-//         mut,
-//         seeds = [
-//             b"metadata",
-//             metadata_program.key().as_ref(),
-//             oq_parent_collection_mint.key().as_ref(),
-//             b"edition"
-//         ],
-//         seeds::program = metadata_program.key(),
-//         bump
-//     )]
-//     /// CHECK: Initialized Via Metaplex CPI
-//     pub oq_parent_authorship_nft_master_edition: UncheckedAccount<'info>,
-
-//     pub metadata_program: Program<'info, Metadata>,
-
-//     pub associated_token_program: Program<'info, AssociatedToken>,
-
-//     pub token_program: Interface<'info, TokenInterface>,
-
-//     pub system_program: Program<'info, System>,
-
-//     pub rent: Sysvar<'info, Rent>,
-// }
 
 // OPENQUANTA COLLECTION CREATION CONTEXT
 #[derive(Accounts)]
