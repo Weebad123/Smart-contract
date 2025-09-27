@@ -2,10 +2,7 @@
 use anchor_lang::prelude::*;
 
 use mpl_core::{
-    ID as MPL_CORE_PROGRAM_ID,
-    instructions::{
-        CreateV2CpiBuilder
-    }, types::{
+    ID as MPL_CORE_PROGRAM_ID, accounts::BaseCollectionV1, instructions::CreateV2CpiBuilder, types::{
         Attribute, Attributes, BurnDelegate, FreezeDelegate, Plugin, PluginAuthority, PluginAuthorityPair
     }};
 
@@ -183,14 +180,14 @@ pub struct PaperInfo<'info> {
     #[account(
         mut,
         seeds = [b"paper_id_counter".as_ref()],
-        bump = paper_id_assigner.counter_bump
+        bump,
     )]
     pub paper_id_assigner: Account<'info, PaperIDCounter>,
 
     #[account(
         mut,
         seeds = [b"author_profile", paper_submitter.key().as_ref()],
-        bump = author_profile.author_bump,
+        bump,
     )]
     pub author_profile: Account<'info, AuthorProfile>,
 
@@ -215,7 +212,8 @@ pub struct PaperInfo<'info> {
         mut,
         constraint = collection.key() == collection_registry.collection_mint @OpenQuantaErrors::InvalidCollection
     )]
-    pub collection: AccountInfo<'info>,
+    //pub collection: AccountInfo<'info>,
+    pub collection: Option<Account<'info, BaseCollectionV1>>,
 
     /// CHECK: SAFE TO USE
     #[account(
@@ -258,10 +256,10 @@ impl<'info> PaperInfo<'info> {
                 value: self.paper_submitter.key().to_string()
             },
             
-            Attribute {
+            /*Attribute {
                 key: "title of research paper".to_string(),
                 value: paper_args.title_of_paper
-            },
+            },*/
 
             Attribute {
                 key: "field of research paper".to_string(),
@@ -272,23 +270,23 @@ impl<'info> PaperInfo<'info> {
                 key: "paper version".to_string(),
                 value: paper_args.paper_version.to_string()
             },
-
+/* 
             Attribute {
                 key: "ipfs hash of research".to_string(),
                 value: paper_args.paper_ipfs_hash
-            },
+            },*/
         ];
 
         asset_plugins.push(PluginAuthorityPair {
             plugin: Plugin::Attributes(Attributes { attribute_list: asset_attributes }),
             authority: None/*Some(PluginAuthority::UpdateAuthority) might not be needed */
         });
-
+ 
         asset_plugins.push(PluginAuthorityPair {
             plugin: Plugin::FreezeDelegate(FreezeDelegate{ frozen: true }),
             authority: Some(PluginAuthority::UpdateAuthority)
         });
-
+ 
         asset_plugins.push(PluginAuthorityPair {
             plugin: Plugin::BurnDelegate(BurnDelegate {}),
             authority: Some(PluginAuthority::UpdateAuthority)
@@ -300,14 +298,22 @@ impl<'info> PaperInfo<'info> {
             }),
             authority: None
         });*/
+
+        let _collection = match &self.collection {
+            Some(collection) => Some(collection.to_account_info()),
+            None => None,
+        };
+
         CreateV2CpiBuilder::new(&self.mpl_core_program.to_account_info())
         .asset(&self.nft_asset.to_account_info())
-        .collection(Some(&self.collection.to_account_info()))
+        //.collection(collection.as_ref())
         .owner(Some(&self.paper_submitter.to_account_info()))
         .authority(Some(&self.oq_nft_mint_authority.to_account_info()))
         .payer(&self.paper_submitter.to_account_info())
-        .system_program(&self.system_program.to_account_info())
         .update_authority(Some(&self.oq_nft_mint_authority.to_account_info()))
+        .system_program(&self.system_program.to_account_info())
+        .name(paper_args.title_of_paper)
+        .uri(paper_args.paper_ipfs_hash)
         .plugins(asset_plugins)
         .invoke_signed(signers_seeds)?;
         Ok(())
@@ -326,7 +332,7 @@ pub struct CreateCollection<'info> {
 
     #[account(
         seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
-        bump = admins.admins_bump
+        bump 
     )]
     pub admins: Account<'info, Administrators>,
 

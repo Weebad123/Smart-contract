@@ -7,7 +7,7 @@ pub mod states;
 pub use instructions::*;
 pub use states::*;
 
-declare_id!("AQ3rnwW5ymhjJEgaer7xMcQMm9tVCUkDHfZptgVtYDS2");
+declare_id!("5WzLQxJCSMZb5E4tTLHyzWFQY2UXGUaTqLN6S6kocjCV");
 
 #[program]
 pub mod open_quanta {
