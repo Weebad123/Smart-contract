@@ -28,6 +28,7 @@ import {
   Key,
   MPL_CORE_PROGRAM_ID,
   mplCore,
+  fetchCollection,
 } from "@metaplex-foundation/mpl-core";
 
 import {
@@ -68,6 +69,7 @@ describe("Open Quanta", async () => {
   const author1 = anchor.web3.Keypair.generate();
   const author1A = anchor.web3.Keypair.generate();
   const collectionMint = anchor.web3.Keypair.generate();
+  
   const nftAssetMint = anchor.web3.Keypair.generate();
 
   let name = 'OpenQuanta Collection';
@@ -75,6 +77,7 @@ describe("Open Quanta", async () => {
 
   //const umi = createUmi("https://api.devnet.solana.com").use(irysUploader()); for devnet testing
   const umi = createUmi("http://127.0.0.1:8899");
+  //const collectionMint = generateSigner(umi);
 
   async function airdropSol(provider, publicKey, solAmount) {
     const airdropSig = await provider.connection.requestAirdrop(
@@ -90,6 +93,7 @@ describe("Open Quanta", async () => {
     await airdropSol(provider, newAdmin.publicKey, 5);
     await airdropSol(provider, admin2.publicKey, 5);
     await airdropSol(provider, author1.publicKey, 5);
+    //await airdropSol(provider, collectionMint.publicKey, 5);
   })
 
   it("Admin Initialization Test", async () => {
@@ -203,7 +207,7 @@ describe("Open Quanta", async () => {
       program.programId
     );
 
-    await program.methods
+    const createCollectionTx = await program.methods
       .createCollection(name, uri)
       .accounts({
         admin: newAdmin.publicKey,
@@ -217,6 +221,16 @@ describe("Open Quanta", async () => {
       })
       .signers([newAdmin, newAdmin, collectionMint])
       .rpc();
+
+      console.log(createCollectionTx);
+      // Make Assertions
+      
+      const collectionRegData = await program.account.collectionRegistry.fetch(collectionRegistryPDA);
+      expect(collectionRegData.totalCollections.toNumber()).to.eq(1);
+      console.log("Collection Entry Is: ", collectionRegData.collectionEntries);
+      //const coreCollection = await fetchCollection(umi, collectionMint.publicKey.toString());
+      //console.log("Collection Details IS: \n", coreCollection);
+      
 
   })
 
@@ -301,5 +315,11 @@ describe("Open Quanta", async () => {
       })
       .signers([author1, nftAssetMint])
       .rpc();
+
+    // Make Assertions
+    const paperInfo = await program.account.paper.fetch(researchPaperPDA);
+    expect(paperInfo.fieldOfResearch.toString()).contains("Blockchain");
+    expect(paperInfo.titleOfPaper.toString()).contains("zero knowledge: the future of blockchain");
+    expect(paperInfo.ownerOfPaper).deep.eq(author1.publicKey);
   })
 })

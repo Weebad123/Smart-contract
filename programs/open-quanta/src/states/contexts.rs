@@ -313,7 +313,7 @@ impl<'info> PaperInfo<'info> {
         .update_authority(Some(&self.oq_nft_mint_authority.to_account_info()))
         .system_program(&self.system_program.to_account_info())
         .name(paper_args.title_of_paper)
-        .uri(paper_args.paper_ipfs_hash)
+        .uri(paper_args.paper_arweave_hash)
         .plugins(asset_plugins)
         .invoke_signed(signers_seeds)?;
         Ok(())

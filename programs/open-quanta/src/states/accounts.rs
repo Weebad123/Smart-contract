@@ -122,7 +122,7 @@ pub struct PaperIDCounter {
 pub struct PaperArgs {
     pub title_of_paper: String,
 
-    pub paper_ipfs_hash: String,
+    pub paper_arweave_hash: String,
 
     pub field_of_research: String,
 
@@ -145,7 +145,7 @@ pub struct Paper {
     pub field_of_research: String,
 
     #[max_len(50)]
-    pub ipfs_hash_to_paper: String,
+    pub arweave_hash_to_paper: String,
 
     #[max_len(10)]
     pub open_quanta_paper_id: String,
