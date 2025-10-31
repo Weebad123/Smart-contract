@@ -28,6 +28,7 @@ import {
   Key,
   MPL_CORE_PROGRAM_ID,
   mplCore,
+  fetchCollection,
 } from "@metaplex-foundation/mpl-core";
 
 import {
@@ -66,9 +67,18 @@ describe("Open Quanta", async () => {
   const newAdmin = anchor.web3.Keypair.generate();
   const admin2 = anchor.web3.Keypair.generate();
   const author1 = anchor.web3.Keypair.generate();
+  const author1A = anchor.web3.Keypair.generate();
   const collectionMint = anchor.web3.Keypair.generate();
+  
+  const nftAssetMint = anchor.web3.Keypair.generate();
+  const nftAsset = anchor.web3.Keypair.generate();
 
-  const umi = createUmi("https://api.devnet.solana.com").use(irysUploader());
+  let name = 'OpenQuanta Collection';
+  let uri = 'https://www.example.com/openquanta-collection.json'
+
+  //const umi = createUmi("https://api.devnet.solana.com").use(irysUploader()); for devnet testing
+  const umi = createUmi("http://127.0.0.1:8899");
+  //const collectionMint = generateSigner(umi);
 
   async function airdropSol(provider, publicKey, solAmount) {
     const airdropSig = await provider.connection.requestAirdrop(
@@ -84,13 +94,15 @@ describe("Open Quanta", async () => {
     await airdropSol(provider, newAdmin.publicKey, 5);
     await airdropSol(provider, admin2.publicKey, 5);
     await airdropSol(provider, author1.publicKey, 5);
+    await airdropSol(provider, nftAssetMint.publicKey, 5);
+    //await airdropSol(provider, collectionMint.publicKey, 5);
   })
 
   it("Admin Initialization Test", async () => {
     
     // Admin PDA
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
@@ -113,17 +125,17 @@ describe("Open Quanta", async () => {
   it("PaperID Counter Initialization", async () => {
     // Get PDA
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [paperIdPDA, paperIdBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("paper_id_counter")],
+      [Buffer.from("paper_id_counter"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("OpenQuanta_Nft_Mint_Authority")],
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
       program.programId
     );
 
@@ -145,34 +157,84 @@ describe("Open Quanta", async () => {
     expect(paperCounterData.currentId.toNumber()).to.eq(0);
   })
 
-  it.skip("Collection Registry Initialization", async () => {
+  it("Collection Registry Initialization", async () => {
 
     // Get PDAs
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [collectionRegistryPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("collection_registry"), Buffer.from("OpenQuanta")],
+      [Buffer.from("collections_registry"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("OpenQuanta_Nft_Mint_Authority")],
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
       program.programId
     );
 
-    const collectionMint = await createCollectionV2
+    //const collectionMint = await createCollectionV2()
 
     await program.methods
       .initializeCollectionRegistry()
-      .accounts({})
-      .signers([])
+      .accounts({
+        admin: newAdmin.publicKey,
+        //@ts-ignore
+        admins: administratorsPDA,
+        collectionMint: collectionMint.publicKey,
+        collectionRegistry: collectionRegistryPDA,
+        oqNftMintAuthority: nftMintAuthorityPDA,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([newAdmin])
       .rpc();
   })
 
-  it.skip("Create OpenQuanta Authorship NFT Collection", async () => {})
+  it("Create OpenQuanta Authorship NFT Collection", async () => {
+    // Creating NFT Core Collection
+    const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
+      program.programId
+    );
+
+    const [collectionRegistryPDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("collections_registry"), Buffer.from("openQuanta")],
+      program.programId
+    );
+
+    const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
+      program.programId
+    );
+
+    const createCollectionTx = await program.methods
+      .createCollection(name, uri)
+      .accounts({
+        admin: newAdmin.publicKey,
+        //@ts-ignore
+        admins: administratorsPDA,
+        collection: collectionMint.publicKey,
+        collectionRegistry: collectionRegistryPDA,
+        payer: newAdmin.publicKey,
+        mplCore: MPL_CORE_PROGRAM_ID,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([newAdmin, newAdmin, collectionMint])
+      .rpc();
+
+      console.log(createCollectionTx);
+      // Make Assertions
+      
+      const collectionRegData = await program.account.collectionRegistry.fetch(collectionRegistryPDA);
+      expect(collectionRegData.totalCollections.toNumber()).to.eq(1);
+      console.log("Collection Entry Is: ", collectionRegData.collectionEntries);
+      //const coreCollection = await fetchCollection(umi, collectionMint.publicKey.toString());
+      //console.log("Collection Details IS: \n", coreCollection);
+      
+
+  })
 
 
   it("Author Profile Creation", async () => {
@@ -201,5 +263,69 @@ describe("Open Quanta", async () => {
     expect(authorProfileData.numberOfSubmittedPapers).to.eq(0);
   })
 
-  it.skip("Author Submits Paper and Gets Minted Authorship NFT", async () => {})
+  it("Author Submits Paper and Gets Minted Authorship NFT", async () => {
+    // Get The PDAs
+    const [author1PDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("author_profile"), author1.publicKey.toBuffer()],
+      program.programId
+    );
+
+    const [collectionRegistryPDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("collections_registry"), Buffer.from("openQuanta")],
+      program.programId
+    );
+
+    const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
+      program.programId
+    );
+
+    const [paperIdPDA, paperIdBump] = PublicKey.findProgramAddressSync(
+      [Buffer.from("paper_id_counter"), Buffer.from("openQuanta")],
+      program.programId
+    );
+
+    const [researchPaperPDA, researchPaperBump] = PublicKey.findProgramAddressSync(
+      [Buffer.from("paper"), author1.publicKey.toBuffer(), Buffer.from("OQ-0000001")],
+      program.programId
+    );
+    const [nftAssetPDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("asset"), author1.publicKey.toBuffer(), Buffer.from("OQ-0000001")],
+      program.programId
+    );
+
+    // Instruction parameters
+    const author1PaperArgs = {
+      titleOfPaper: "zero knowledge: the future of blockchain",
+      paperArweaveHash: "slkjdljslhoajjlkjfjfoaskjfljshgowonclc",
+      fieldOfResearch: "Blockchain",
+      paperVersion: 1,
+    };
+    const coAuthors = [author1A.publicKey]
+
+    // Call instruction
+    await program.methods
+      .submitPaper(author1PaperArgs, coAuthors)
+      .accounts({
+        paperSubmitter: author1.publicKey,
+        //@ts-ignore
+        paperIdAssigner: paperIdPDA,
+        authorProfile: author1PDA,
+        researchPaper: researchPaperPDA,
+        collectionRegistry: collectionRegistryPDA,
+        collection: collectionMint.publicKey,
+        oqNftMintAuthority: nftMintAuthorityPDA,
+        nftAsset: nftAsset.publicKey,
+        mplCoreProgram: MPL_CORE_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([author1, nftAsset])
+      .rpc();
+
+    // Make Assertions
+    const paperInfo = await program.account.paper.fetch(researchPaperPDA);
+    expect(paperInfo.fieldOfResearch.toString()).contains("Blockchain");
+    expect(paperInfo.titleOfPaper.toString()).contains("zero knowledge: the future of blockchain");
+    expect(paperInfo.ownerOfPaper).deep.eq(author1.publicKey);
+  })
 })

@@ -38,7 +38,8 @@ pub struct CollectionRegistry {
     pub mint_authority: Pubkey,
 
     // The collection mint for Open Quanta
-    pub collection_mint: Pubkey,
+    #[max_len(5)]
+    pub collection_mints: Vec<Pubkey>,
     
     #[max_len(5)]
     pub collection_entries: Vec<CollectionEntry>,
@@ -122,7 +123,7 @@ pub struct PaperIDCounter {
 pub struct PaperArgs {
     pub title_of_paper: String,
 
-    pub paper_ipfs_hash: String,
+    pub paper_arweave_hash: String,
 
     pub field_of_research: String,
 
@@ -145,7 +146,7 @@ pub struct Paper {
     pub field_of_research: String,
 
     #[max_len(50)]
-    pub ipfs_hash_to_paper: String,
+    pub arweave_hash_to_paper: String,
 
     #[max_len(10)]
     pub open_quanta_paper_id: String,
@@ -153,6 +154,8 @@ pub struct Paper {
     pub paper_version: u8,
 
     pub time_of_submission: i64,
+
+    pub nft_address_for_paper: Pubkey,
 
     pub paper_bump: u8,
 }

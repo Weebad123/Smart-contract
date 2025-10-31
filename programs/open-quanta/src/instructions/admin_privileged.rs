@@ -27,7 +27,9 @@ pub fn init_collection_registry(ctx: Context<CollectionRegistryInfo>) -> Result<
     collection_registry.total_collections = 0;
     collection_registry.collection_entries = vec![];
     collection_registry.mint_authority = ctx.accounts.oq_nft_mint_authority.key();
-    collection_registry.collection_mint = ctx.accounts.collection_mint.key();
+    collection_registry.collection_mints.push(
+        ctx.accounts.collection_mint.key()
+    );
     
     msg!("Collection Registry initialized successfully");
     Ok(())

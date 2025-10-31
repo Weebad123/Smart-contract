@@ -7,13 +7,16 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-open_quanta = "AQ3rnwW5ymhjJEgaer7xMcQMm9tVCUkDHfZptgVtYDS2"
+open_quanta = "5WzLQxJCSMZb5E4tTLHyzWFQY2UXGUaTqLN6S6kocjCV"
+
+[programs.devnet]
+open_quanta = "5WzLQxJCSMZb5E4tTLHyzWFQY2UXGUaTqLN6S6kocjCV"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

@@ -2,10 +2,7 @@
 use anchor_lang::prelude::*;
 
 use mpl_core::{
-    ID as MPL_CORE_PROGRAM_ID,
-    instructions::{
-        CreateV2CpiBuilder
-    }, types::{
+    ID as MPL_CORE_PROGRAM_ID, accounts::BaseCollectionV1, instructions::CreateV2CpiBuilder, types::{
         Attribute, Attributes, BurnDelegate, FreezeDelegate, Plugin, PluginAuthority, PluginAuthorityPair
     }};
 
@@ -24,7 +21,7 @@ pub struct AdministratorsInfo<'info> {
         init,
         payer = deployer,
         space = 8 + Administrators::INIT_SPACE,
-        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
+        seeds = [b"administrators".as_ref(), b"openQuanta".as_ref()],
         bump,
     )]
     pub admins: Account<'info, Administrators>,
@@ -52,7 +49,7 @@ pub struct CollectionRegistryInfo<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
+        seeds = [b"administrators".as_ref(), b"openQuanta".as_ref()],
         bump
     )]
     pub admins: Account<'info, Administrators>,
@@ -61,7 +58,7 @@ pub struct CollectionRegistryInfo<'info> {
         init,
         payer = admin,
         space = 8 + CollectionRegistry::INIT_SPACE,
-        seeds = [b"collection_registry".as_ref(), b"OpenQuanta".as_ref()],
+        seeds = [b"collections_registry".as_ref(), b"openQuanta".as_ref()],
         bump,
     )]
     pub collection_registry: Account<'info, CollectionRegistry>,
@@ -69,7 +66,7 @@ pub struct CollectionRegistryInfo<'info> {
     ///CHECK: SAFE TO IGNORE FOR NOW
      #[account(
         mut,
-        seeds = [b"OpenQuanta_Nft_Mint_Authority".as_ref()],
+        seeds = [b"openQuanta_Nft_Mint_Authority".as_ref()],
         bump,
     )]
     pub oq_nft_mint_authority: AccountInfo<'info>,
@@ -95,7 +92,7 @@ pub struct PaperIDCounterInfo<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
+        seeds = [b"administrators".as_ref(), b"openQuanta".as_ref()],
         bump
     )]
     pub admins: Account<'info, Administrators>,
@@ -104,7 +101,7 @@ pub struct PaperIDCounterInfo<'info> {
         init,
         payer = admin,
         space = 8 + PaperIDCounter::INIT_SPACE,
-        seeds = [b"paper_id_counter".as_ref()],
+        seeds = [b"paper_id_counter".as_ref(), b"openQuanta".as_ref()],
         bump,
     )]
     pub paper_id_assigner: Account<'info, PaperIDCounter>,
@@ -114,7 +111,7 @@ pub struct PaperIDCounterInfo<'info> {
         init,
         payer = admin,
         space = 8,
-        seeds = [b"OpenQuanta_Nft_Mint_Authority".as_ref()],
+        seeds = [b"openQuanta_Nft_Mint_Authority".as_ref()],
         bump,
     )]
     pub oq_nft_mint_authority: AccountInfo<'info>,
@@ -182,15 +179,15 @@ pub struct PaperInfo<'info> {
 
     #[account(
         mut,
-        seeds = [b"paper_id_counter".as_ref()],
-        bump = paper_id_assigner.counter_bump
+        seeds = [b"paper_id_counter".as_ref(), b"openQuanta".as_ref()],
+        bump,
     )]
     pub paper_id_assigner: Account<'info, PaperIDCounter>,
 
     #[account(
         mut,
         seeds = [b"author_profile", paper_submitter.key().as_ref()],
-        bump = author_profile.author_bump,
+        bump,
     )]
     pub author_profile: Account<'info, AuthorProfile>,
 
@@ -205,7 +202,7 @@ pub struct PaperInfo<'info> {
 
     #[account(
         mut,
-        seeds = [b"collection_registry".as_ref(), b"OpenQuanta".as_ref()],
+        seeds = [b"collections_registry".as_ref(), b"openQuanta".as_ref()],
         bump
     )]
     pub collection_registry: Account<'info, CollectionRegistry>,
@@ -213,21 +210,27 @@ pub struct PaperInfo<'info> {
     /// CHECK: SAFE TO USE
     #[account(
         mut,
-        constraint = collection.key() == collection_registry.collection_mint @OpenQuantaErrors::InvalidCollection
+        constraint = collection_registry.collection_mints.contains(&collection.key()) @OpenQuantaErrors::InvalidCollection
     )]
-    pub collection: AccountInfo<'info>,
+    //pub collection: AccountInfo<'info>,
+    pub collection: Option<Account<'info, BaseCollectionV1>>,
 
     /// CHECK: SAFE TO USE
     #[account(
         mut,
-        seeds = [b"OpenQuanta_Nft_Mint_Authority".as_ref()],
+        seeds = [b"openQuanta_Nft_Mint_Authority".as_ref()],
         bump,
     )]
     pub oq_nft_mint_authority: AccountInfo<'info>,
 
-    //
-    #[account(mut)]
-    pub nft_asset: Signer<'info>,
+    /// CHECK: SAFE TO USE
+    #[account(
+        mut,
+        signer,
+        //seeds = [b"asset", paper_submitter.key().as_ref(), &format!("OQ-{:07}", paper_id_assigner.current_id + 1).as_bytes()],
+        //bump
+    )]
+    pub nft_asset: AccountInfo<'info>,
 
     #[account(address = MPL_CORE_PROGRAM_ID)]
     /// CHECK: This doesn't need to be checked, because there is the address constraint
@@ -242,10 +245,19 @@ impl<'info> PaperInfo<'info> {
     pub fn mint_authorship_nft(&mut self, bumps: PaperInfoBumps, paper_args: PaperArgs) -> Result<()> {
 
         let authority_seeds = &[
-            b"OpenQuanta_Nft_Mint_Authority".as_ref(),
+            b"openQuanta_Nft_Mint_Authority".as_ref(),
             &[bumps.oq_nft_mint_authority]
         ];
-        let signers_seeds = &[&authority_seeds[..]];
+
+        let _submitter = self.paper_submitter.key();
+        let _id_gen = format!("OQ-{:07}", self.paper_id_assigner.current_id + 1);
+        /*let _nft_asset_seeds = &[
+            b"asset",
+            submitter.as_ref(), 
+            &id_gen.as_bytes(),
+            &[bumps.nft_asset]
+        ];*/
+        let signers_seeds = &[&authority_seeds[..] /* , &nft_asset_seeds[..]*/];
 
         let mut asset_plugins : Vec<PluginAuthorityPair> = vec![];
         let asset_attributes: Vec<Attribute> = vec![
@@ -258,10 +270,10 @@ impl<'info> PaperInfo<'info> {
                 value: self.paper_submitter.key().to_string()
             },
             
-            Attribute {
+            /*Attribute {
                 key: "title of research paper".to_string(),
                 value: paper_args.title_of_paper
-            },
+            },*/
 
             Attribute {
                 key: "field of research paper".to_string(),
@@ -272,23 +284,23 @@ impl<'info> PaperInfo<'info> {
                 key: "paper version".to_string(),
                 value: paper_args.paper_version.to_string()
             },
-
+/* 
             Attribute {
                 key: "ipfs hash of research".to_string(),
                 value: paper_args.paper_ipfs_hash
-            },
+            },*/
         ];
 
         asset_plugins.push(PluginAuthorityPair {
             plugin: Plugin::Attributes(Attributes { attribute_list: asset_attributes }),
             authority: None/*Some(PluginAuthority::UpdateAuthority) might not be needed */
         });
-
+ 
         asset_plugins.push(PluginAuthorityPair {
             plugin: Plugin::FreezeDelegate(FreezeDelegate{ frozen: true }),
             authority: Some(PluginAuthority::UpdateAuthority)
         });
-
+ 
         asset_plugins.push(PluginAuthorityPair {
             plugin: Plugin::BurnDelegate(BurnDelegate {}),
             authority: Some(PluginAuthority::UpdateAuthority)
@@ -300,14 +312,36 @@ impl<'info> PaperInfo<'info> {
             }),
             authority: None
         });*/
+
+        /*let collection = match &self.collection {
+            Some(collection) => Some(collection.to_account_info()),
+            None => None,
+        };*/
+
+        msg!("paper_submitter:   {} signer={} writable={}", self.paper_submitter.key(), self.paper_submitter.to_account_info().is_signer, self.paper_submitter.to_account_info().is_writable);
+        msg!("paper_id_assigner: {} signer={} writable={}", self.paper_id_assigner.key(), self.paper_id_assigner.to_account_info().is_signer, self.paper_id_assigner.to_account_info().is_writable);
+        msg!("author_profile:    {} signer={} writable={}", self.author_profile.key(), self.author_profile.to_account_info().is_signer, self.author_profile.to_account_info().is_writable);
+        msg!("collection_registry:{} signer={} writable={}", self.collection_registry.key(), self.collection_registry.to_account_info().is_signer, self.collection_registry.to_account_info().is_writable);
+        if let Some(c) = &self.collection {
+        msg!("collection:        {} signer={} writable={}", c.key(), c.to_account_info().is_signer, c.to_account_info().is_writable);
+        } else {
+        msg!("collection:        None");
+        }
+        msg!("oq_nft_mint_authority:{} signer={} writable={}", self.oq_nft_mint_authority.key(), self.oq_nft_mint_authority.is_signer, self.oq_nft_mint_authority.is_writable);
+        msg!("nft_asset:         {} signer={} writable={}", self.nft_asset.key(), self.nft_asset.to_account_info().is_signer, self.nft_asset.to_account_info().is_writable);
+        msg!("mpl_core_program:  {} signer={} writable={}", self.mpl_core_program.key(), self.mpl_core_program.to_account_info().is_signer, self.mpl_core_program.to_account_info().is_writable);
+
+
         CreateV2CpiBuilder::new(&self.mpl_core_program.to_account_info())
         .asset(&self.nft_asset.to_account_info())
-        .collection(Some(&self.collection.to_account_info()))
+        //.collection(collection.as_ref())
         .owner(Some(&self.paper_submitter.to_account_info()))
         .authority(Some(&self.oq_nft_mint_authority.to_account_info()))
         .payer(&self.paper_submitter.to_account_info())
-        .system_program(&self.system_program.to_account_info())
         .update_authority(Some(&self.oq_nft_mint_authority.to_account_info()))
+        .system_program(&self.system_program.to_account_info())
+        .name(paper_args.title_of_paper)
+        .uri(paper_args.paper_arweave_hash)
         .plugins(asset_plugins)
         .invoke_signed(signers_seeds)?;
         Ok(())
@@ -325,14 +359,14 @@ pub struct CreateCollection<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        seeds = [b"administrators".as_ref(), b"OpenQuanta".as_ref()],
-        bump = admins.admins_bump
+        seeds = [b"administrators".as_ref(), b"openQuanta".as_ref()],
+        bump 
     )]
     pub admins: Account<'info, Administrators>,
 
     #[account(
         mut,
-        seeds = [b"collection_registry".as_ref(), b"OpenQuanta".as_ref()],
+        seeds = [b"collections_registry".as_ref(), b"openQuanta".as_ref()],
         bump
     )]
     pub collection_registry: Account<'info, CollectionRegistry>,

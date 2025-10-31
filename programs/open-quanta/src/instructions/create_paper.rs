@@ -22,10 +22,11 @@ pub fn paper_submit(
             research_sub_owners: paper_sub_owners,
             title_of_paper: paper_args.title_of_paper.clone(),
             field_of_research: paper_args.field_of_research.clone(),
-            ipfs_hash_to_paper: paper_args.paper_ipfs_hash.clone(),
+            arweave_hash_to_paper: paper_args.paper_arweave_hash.clone(),
             open_quanta_paper_id: format!("OQ-{:10}", paper_id_counter.current_id + 1),
             paper_version: paper_args.paper_version.clone(),
             time_of_submission: Clock::get()?.unix_timestamp,
+            nft_address_for_paper: ctx.accounts.nft_asset.key(),
             paper_bump: ctx.bumps.research_paper
         }
     );
