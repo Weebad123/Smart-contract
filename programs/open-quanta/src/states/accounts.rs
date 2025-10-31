@@ -38,7 +38,8 @@ pub struct CollectionRegistry {
     pub mint_authority: Pubkey,
 
     // The collection mint for Open Quanta
-    pub collection_mint: Pubkey,
+    #[max_len(5)]
+    pub collection_mints: Vec<Pubkey>,
     
     #[max_len(5)]
     pub collection_entries: Vec<CollectionEntry>,
@@ -153,6 +154,8 @@ pub struct Paper {
     pub paper_version: u8,
 
     pub time_of_submission: i64,
+
+    pub nft_address_for_paper: Pubkey,
 
     pub paper_bump: u8,
 }

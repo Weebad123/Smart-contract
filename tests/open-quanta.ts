@@ -71,6 +71,7 @@ describe("Open Quanta", async () => {
   const collectionMint = anchor.web3.Keypair.generate();
   
   const nftAssetMint = anchor.web3.Keypair.generate();
+  const nftAsset = anchor.web3.Keypair.generate();
 
   let name = 'OpenQuanta Collection';
   let uri = 'https://www.example.com/openquanta-collection.json'
@@ -93,6 +94,7 @@ describe("Open Quanta", async () => {
     await airdropSol(provider, newAdmin.publicKey, 5);
     await airdropSol(provider, admin2.publicKey, 5);
     await airdropSol(provider, author1.publicKey, 5);
+    await airdropSol(provider, nftAssetMint.publicKey, 5);
     //await airdropSol(provider, collectionMint.publicKey, 5);
   })
 
@@ -100,7 +102,7 @@ describe("Open Quanta", async () => {
     
     // Admin PDA
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
@@ -123,17 +125,17 @@ describe("Open Quanta", async () => {
   it("PaperID Counter Initialization", async () => {
     // Get PDA
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [paperIdPDA, paperIdBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("paper_id_counter")],
+      [Buffer.from("paper_id_counter"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("OpenQuanta_Nft_Mint_Authority")],
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
       program.programId
     );
 
@@ -159,17 +161,17 @@ describe("Open Quanta", async () => {
 
     // Get PDAs
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [collectionRegistryPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("collection_registry"), Buffer.from("OpenQuanta")],
+      [Buffer.from("collections_registry"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("OpenQuanta_Nft_Mint_Authority")],
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
       program.programId
     );
 
@@ -193,17 +195,17 @@ describe("Open Quanta", async () => {
   it("Create OpenQuanta Authorship NFT Collection", async () => {
     // Creating NFT Core Collection
     const [administratorsPDA, administratorsBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("administrators"), Buffer.from("OpenQuanta")],
+      [Buffer.from("administrators"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [collectionRegistryPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("collection_registry"), Buffer.from("OpenQuanta")],
+      [Buffer.from("collections_registry"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("OpenQuanta_Nft_Mint_Authority")],
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
       program.programId
     );
 
@@ -269,17 +271,17 @@ describe("Open Quanta", async () => {
     );
 
     const [collectionRegistryPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("collection_registry"), Buffer.from("OpenQuanta")],
+      [Buffer.from("collections_registry"), Buffer.from("openQuanta")],
       program.programId
     );
 
     const [nftMintAuthorityPDA, ] = PublicKey.findProgramAddressSync(
-      [Buffer.from("OpenQuanta_Nft_Mint_Authority")],
+      [Buffer.from("openQuanta_Nft_Mint_Authority")],
       program.programId
     );
 
     const [paperIdPDA, paperIdBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("paper_id_counter")],
+      [Buffer.from("paper_id_counter"), Buffer.from("openQuanta")],
       program.programId
     );
 
@@ -287,11 +289,15 @@ describe("Open Quanta", async () => {
       [Buffer.from("paper"), author1.publicKey.toBuffer(), Buffer.from("OQ-0000001")],
       program.programId
     );
+    const [nftAssetPDA, ] = PublicKey.findProgramAddressSync(
+      [Buffer.from("asset"), author1.publicKey.toBuffer(), Buffer.from("OQ-0000001")],
+      program.programId
+    );
 
     // Instruction parameters
     const author1PaperArgs = {
       titleOfPaper: "zero knowledge: the future of blockchain",
-      paperIpfsHash: "slkjdljslhoajjlkjfjfoaskjfljshgowonclc",
+      paperArweaveHash: "slkjdljslhoajjlkjfjfoaskjfljshgowonclc",
       fieldOfResearch: "Blockchain",
       paperVersion: 1,
     };
@@ -309,11 +315,11 @@ describe("Open Quanta", async () => {
         collectionRegistry: collectionRegistryPDA,
         collection: collectionMint.publicKey,
         oqNftMintAuthority: nftMintAuthorityPDA,
-        nftAsset: nftAssetMint.publicKey,
+        nftAsset: nftAsset.publicKey,
         mplCoreProgram: MPL_CORE_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([author1, nftAssetMint])
+      .signers([author1, nftAsset])
       .rpc();
 
     // Make Assertions
